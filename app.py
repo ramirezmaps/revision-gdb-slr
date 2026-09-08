@@ -440,7 +440,7 @@ if target_gdb_path:
                                 history_for_gemini.append({"role": role_gemini, "parts": [{"text": msg["content"]}]})
                                 
                             chat = client.chats.create(
-                                model="gemini-2.5-flash",
+                                model="gemini-3.6-flash",
                                 config={"system_instruction": system_instruction},
                                 history=history_for_gemini
                             )
