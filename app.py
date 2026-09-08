@@ -78,9 +78,8 @@ if uploaded_file is not None:
     else:
         st.sidebar.error("No se encontró ninguna carpeta .gdb dentro del archivo ZIP cargado.")
 
-st.sidebar.markdown("---")
-st.sidebar.subheader("🤖 Configuración de IA")
-gemini_api_key = st.sidebar.text_input("Gemini API Key:", type="password", help="Consigue una clave gratis en Google AI Studio para activar el Chat.")
+# Obtener API Key de los secretos (oculto para usuarios finales)
+gemini_api_key = st.secrets.get("GEMINI_API_KEY", None)
 
 # Procesar Auditoría
 if target_gdb_path:
@@ -398,7 +397,7 @@ if target_gdb_path:
             st.markdown("Pregúntale a Gemini sobre los resultados de tu Geodatabase. La IA analizará la estructura y los problemas detectados para darte recomendaciones personalizadas.")
             
             if not gemini_api_key:
-                st.info("👈 Para usar el chat, ingresa tu **Gemini API Key** en el panel lateral.")
+                st.info("El Asistente de IA está temporalmente deshabilitado por el administrador.")
             else:
                 # Inicializar historial de chat con un mensaje de bienvenida
                 if "messages" not in st.session_state:
