@@ -321,7 +321,7 @@ if target_gdb_path:
                             tooltip=folium.GeoJsonTooltip(fields=popup_fields, aliases=popup_fields) if popup_fields else None
                         ).add_to(m)
                         
-                        st_folium(m, width="100%", height=500)
+                        st_folium(m, width="stretch", height=500)
                         
                     except Exception as e:
                         st.error(f"No se pudo renderizar el mapa para esta capa: {e}")
