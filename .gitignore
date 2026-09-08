@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Streamlit
+.streamlit/
+
+# Esri / ArcPy temporary files or DBs
+*.gdb
+*.gdb.zip
+*.lock
+
+# IDEs
+.vscode/
+.idea/
+
+# Excel files generated as output or tests if we don't want them in version control
+test_output_report.xlsx
