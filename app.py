@@ -5,6 +5,7 @@ import pandas as pd
 import geopandas as gpd
 import streamlit as st
 import pydeck as pdk
+import math
 
 from gdb_inspector import extract_zip_gdb, find_gdbs_in_directory, inspect_gdb_all
 from report_generator import generate_excel_report
@@ -282,10 +283,26 @@ if target_gdb_path:
                         else:
                             gdf_map = gdf_wgs84
                             
-                        # Calcular centro del mapa
+                        # Calcular centro y zoom extend del mapa
                         bounds = gdf_map.total_bounds # [minx, miny, maxx, maxy]
                         center_lat = (bounds[1] + bounds[3]) / 2.0
                         center_lon = (bounds[0] + bounds[2]) / 2.0
+                        
+                        # Función auxiliar para calcular el zoom dinámico
+                        def get_zoom(bounds):
+                            min_lon, min_lat, max_lon, max_lat = bounds
+                            if abs(max_lon - min_lon) < 0.0001 or abs(max_lat - min_lat) < 0.0001:
+                                return 15 # Zoom por defecto para puntos muy cercanos
+                                
+                            lat_fraction = (math.sin(max_lat * math.pi / 180) - math.sin(min_lat * math.pi / 180)) / 2
+                            lon_fraction = (max_lon - min_lon) / 360
+                            
+                            zoom_lat = math.log(500 / 256 / abs(lat_fraction)) / math.log(2) if lat_fraction != 0 else 20
+                            zoom_lon = math.log(800 / 256 / abs(lon_fraction)) / math.log(2) if lon_fraction != 0 else 20
+                            
+                            return max(min(zoom_lat, zoom_lon) - 0.5, 1)
+
+                        dynamic_zoom = get_zoom(bounds)
                         
                         # Definir la capa de PyDeck
                         layer = pdk.Layer(
@@ -306,7 +323,7 @@ if target_gdb_path:
                         view_state = pdk.ViewState(
                             latitude=center_lat,
                             longitude=center_lon,
-                            zoom=11,
+                            zoom=dynamic_zoom,
                             pitch=0,
                         )
                         
