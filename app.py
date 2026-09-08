@@ -400,17 +400,19 @@ if target_gdb_path:
             if not gemini_api_key:
                 st.info("👈 Para usar el chat, ingresa tu **Gemini API Key** en el panel lateral.")
             else:
-                # Inicializar historial de chat
+                # Inicializar historial de chat con un mensaje de bienvenida
                 if "messages" not in st.session_state:
-                    st.session_state.messages = []
+                    st.session_state.messages = [
+                        {"role": "assistant", "content": "¡Hola! He analizado tu Geodatabase con éxito. 🗺️\n\n¿En qué te puedo ayudar hoy? Puedes preguntarme sobre los campos vacíos, solicitar sugerencias de limpieza, o pedirme redactar un reporte sobre los datos."}
+                    ]
                     
-                # Construir el contexto de la GDB estructurado para la IA
+                # Construir el contexto de la GDB estructurado para la IA (usando CSV nativo)
                 context_str = "Resumen de la GDB:\n"
-                context_str += summary_df.to_markdown(index=False) + "\n\n"
+                context_str += summary_df.to_csv(index=False) + "\n\n"
                 context_str += "Detalle de campos incompletos por Feature Class:\n"
                 for fc, details_df in fields_details_dict.items():
                     if not details_df.empty:
-                        context_str += f"- {fc}:\n{details_df.to_markdown(index=False)}\n"
+                        context_str += f"- {fc}:\n{details_df.to_csv(index=False)}\n"
 
                 # Mostrar historial visualmente
                 for message in st.session_state.messages:
