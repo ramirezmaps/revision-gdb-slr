@@ -4,6 +4,7 @@ import tempfile
 import pandas as pd
 import geopandas as gpd
 import streamlit as st
+import pydeck as pdk
 
 from gdb_inspector import extract_zip_gdb, find_gdbs_in_directory, inspect_gdb_all
 from report_generator import generate_excel_report
@@ -124,10 +125,11 @@ if target_gdb_path:
         # ---------------------------------------------------------
         # PESTAÑAS DE NAVEGACIÓN Y AUDITORÍA
         # ---------------------------------------------------------
-        tab1, tab2, tab3, tab4 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5 = st.tabs([
             "📊 Resumen General de GDB",
             "🔍 Inspector de Feature Class",
             "⚠️ Visor de Registros Incompletos",
+            "🗺️ Mapa Interactivo",
             "📥 Exportar Reportes"
         ])
         
@@ -248,9 +250,83 @@ if target_gdb_path:
                     st.dataframe(incomplete_rows[display_cols])
 
         # ---------------------------------------------------------
-        # TAB 4: EXPORTAR REPORTES
+        # TAB 4: MAPA INTERACTIVO
         # ---------------------------------------------------------
         with tab4:
+            st.subheader("Visualización Geográfica de Entidades")
+            
+            selected_fc_t4 = st.selectbox(
+                "Seleccione la Feature Class a visualizar:",
+                list(gdfs_dict.keys()),
+                key="select_fc_tab4"
+            )
+            
+            if selected_fc_t4:
+                gdf = gdfs_dict[selected_fc_t4]
+                
+                if 'geometry' not in gdf.columns or gdf.geometry.empty or gdf.geometry.dropna().empty:
+                    st.info("Esta Feature Class es una tabla alfanumérica o no contiene geometrías válidas.")
+                else:
+                    try:
+                        # Reproyectar a WGS84 (EPSG:4326) para visualización web
+                        if gdf.crs is not None and gdf.crs.to_epsg() != 4326:
+                            gdf_wgs84 = gdf.to_crs(epsg=4326)
+                        else:
+                            gdf_wgs84 = gdf.copy()
+                            
+                        # Limitar la cantidad de elementos en el mapa para mantener la fluidez
+                        max_map_features = 1000
+                        if len(gdf_wgs84) > max_map_features:
+                            st.caption(f"Mostrando los primeros {max_map_features} elementos de {len(gdf_wgs84)} para optimizar la visualización.")
+                            gdf_map = gdf_wgs84.iloc[:max_map_features]
+                        else:
+                            gdf_map = gdf_wgs84
+                            
+                        # Calcular centro del mapa
+                        bounds = gdf_map.total_bounds # [minx, miny, maxx, maxy]
+                        center_lat = (bounds[1] + bounds[3]) / 2.0
+                        center_lon = (bounds[0] + bounds[2]) / 2.0
+                        
+                        # Definir la capa de PyDeck
+                        layer = pdk.Layer(
+                            "GeoJsonLayer",
+                            gdf_map,
+                            opacity=0.8,
+                            stroked=True,
+                            filled=True,
+                            extruded=False,
+                            wireframe=True,
+                            get_elevation=0,
+                            get_fill_color="[31, 78, 121, 200]",
+                            get_line_color="[255, 255, 255]",
+                            pickable=True,
+                        )
+                        
+                        # Definir la vista inicial
+                        view_state = pdk.ViewState(
+                            latitude=center_lat,
+                            longitude=center_lon,
+                            zoom=11,
+                            pitch=0,
+                        )
+                        
+                        # Renderizar mapa
+                        r = pdk.Deck(
+                            layers=[layer],
+                            initial_view_state=view_state,
+                            map_style="mapbox://styles/mapbox/light-v10",
+                            tooltip={"text": "Geometría visualizada"}
+                        )
+                        
+                        st.pydeck_chart(r)
+                        
+                    except Exception as e:
+                        st.error(f"No se pudo renderizar el mapa para esta capa: {e}")
+
+        # ---------------------------------------------------------
+        # TAB 5: EXPORTAR REPORTES
+        # ---------------------------------------------------------
+        with tab5:
             st.subheader("Descarga de Reportes Consolidados")
             st.markdown("Descargue el informe detallado en formato Excel o CSV para enviar al usuario o equipo responsable del llenado de datos.")
             
