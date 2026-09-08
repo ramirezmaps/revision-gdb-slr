@@ -100,7 +100,7 @@ else: # Ruta local
 if target_gdb_path:
     st.sidebar.success(f"GDB Seleccionada:\n`{os.path.basename(target_gdb_path)}`")
     
-    if st.sidebar.button("🚀 Ejecutar Auditoría de GDB", type="primary", use_container_width=True) or 'audit_results' in st.session_state:
+    if st.sidebar.button("🚀 Ejecutar Auditoría de GDB", type="primary") or 'audit_results' in st.session_state:
         
         # Ejecutar análisis si no está en caché o si cambió la GDB
         if 'audit_results' not in st.session_state or st.session_state.get('current_gdb') != target_gdb_path:
@@ -165,7 +165,6 @@ if target_gdb_path:
             display_df = summary_df.copy()
             st.dataframe(
                 display_df,
-                use_container_width=True,
                 column_config={
                     "% Completitud Capa": st.column_config.ProgressColumn(
                         "% Completitud",
@@ -184,8 +183,7 @@ if target_gdb_path:
                 st.subheader("Porcentaje de Completitud por Feature Class")
                 st.bar_chart(
                     summary_df.set_index('Feature Class')['% Completitud Capa'],
-                    color="#1F4E79",
-                    use_container_width=True
+                    color="#1F4E79"
                 )
 
         # ---------------------------------------------------------
@@ -216,7 +214,6 @@ if target_gdb_path:
                 
                 st.dataframe(
                     show_df,
-                    use_container_width=True,
                     column_config={
                         "% Vacíos": st.column_config.NumberColumn(format="%.2f%%"),
                         "% Completitud": st.column_config.ProgressColumn(format="%.2f%%", min_value=0, max_value=100),
@@ -271,7 +268,7 @@ if target_gdb_path:
                     
                     # Mostrar tabla sin la columna de geometría pesada
                     display_cols = [c for c in incomplete_rows.columns if c != 'geometry']
-                    st.dataframe(incomplete_rows[display_cols], use_container_width=True)
+                    st.dataframe(incomplete_rows[display_cols])
 
         # ---------------------------------------------------------
         # TAB 4: MAPA INTERACTIVO
@@ -348,8 +345,7 @@ if target_gdb_path:
                     data=excel_bytes,
                     file_name=f"Reporte_Revision_GDB_{gdb_basename}.xlsx",
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    type="primary",
-                    use_container_width=True
+                    type="primary"
                 )
                 
             with col_exp2:
@@ -360,8 +356,7 @@ if target_gdb_path:
                     label="📥 Descargar Resumen CSV",
                     data=csv_bytes,
                     file_name=f"Resumen_GDB_{gdb_basename}.csv",
-                    mime="text/csv",
-                    use_container_width=True
+                    mime="text/csv"
                 )
 else:
     # Estado inicial cuando no se ha seleccionado ninguna GDB
