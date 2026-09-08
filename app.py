@@ -4,8 +4,6 @@ import tempfile
 import pandas as pd
 import geopandas as gpd
 import streamlit as st
-import folium
-from streamlit_folium import st_folium
 
 from gdb_inspector import extract_zip_gdb, find_gdbs_in_directory, inspect_gdb_all
 from report_generator import generate_excel_report
@@ -126,11 +124,10 @@ if target_gdb_path:
         # ---------------------------------------------------------
         # PESTAÑAS DE NAVEGACIÓN Y AUDITORÍA
         # ---------------------------------------------------------
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3, tab4 = st.tabs([
             "📊 Resumen General de GDB",
             "🔍 Inspector de Feature Class",
             "⚠️ Visor de Registros Incompletos",
-            "🗺️ Mapa Interactivo",
             "📥 Exportar Reportes"
         ])
         
@@ -251,62 +248,9 @@ if target_gdb_path:
                     st.dataframe(incomplete_rows[display_cols])
 
         # ---------------------------------------------------------
-        # TAB 4: MAPA INTERACTIVO
+        # TAB 4: EXPORTAR REPORTES
         # ---------------------------------------------------------
         with tab4:
-            st.subheader("Visualización Geográfica de Entidades")
-            
-            selected_fc_t4 = st.selectbox(
-                "Seleccione la Feature Class a visualizar:",
-                list(gdfs_dict.keys()),
-                key="select_fc_tab4"
-            )
-            
-            if selected_fc_t4:
-                gdf = gdfs_dict[selected_fc_t4]
-                
-                if 'geometry' not in gdf.columns or gdf.geometry.empty or gdf.geometry.dropna().empty:
-                    st.info("Esta Feature Class es una tabla alfanumérica o no contiene geometrías válidas.")
-                else:
-                    try:
-                        # Reproyectar a WGS84 (EPSG:4326) para folium
-                        if gdf.crs is not None and gdf.crs.to_epsg() != 4326:
-                            gdf_wgs84 = gdf.to_crs(epsg=4326)
-                        else:
-                            gdf_wgs84 = gdf.copy()
-                            
-                        # Limitar la cantidad de elementos en el mapa para mantener la fluidez
-                        max_map_features = 500
-                        if len(gdf_wgs84) > max_map_features:
-                            st.caption(f"Mostrando los primeros {max_map_features} elementos de {len(gdf_wgs84)} para optimizar la visualización.")
-                            gdf_map = gdf_wgs84.iloc[:max_map_features]
-                        else:
-                            gdf_map = gdf_wgs84
-                            
-                        # Calcular centro del mapa
-                        bounds = gdf_map.total_bounds # [minx, miny, maxx, maxy]
-                        center_lat = (bounds[1] + bounds[3]) / 2.0
-                        center_lon = (bounds[0] + bounds[2]) / 2.0
-                        
-                        m = folium.Map(location=[center_lat, center_lon], zoom_start=11, tiles="OpenStreetMap")
-                        
-                        # Agregar capa GeoJSON
-                        popup_fields = [c for c in gdf_map.columns if c != 'geometry'][:5]
-                        folium.GeoJson(
-                            gdf_map,
-                            name=selected_fc_t4,
-                            tooltip=folium.GeoJsonTooltip(fields=popup_fields, aliases=popup_fields) if popup_fields else None
-                        ).add_to(m)
-                        
-                        st_folium(m, width="stretch", height=500)
-                        
-                    except Exception as e:
-                        st.error(f"No se pudo renderizar el mapa para esta capa: {e}")
-
-        # ---------------------------------------------------------
-        # TAB 5: EXPORTAR REPORTES
-        # ---------------------------------------------------------
-        with tab5:
             st.subheader("Descarga de Reportes Consolidados")
             st.markdown("Descargue el informe detallado en formato Excel o CSV para enviar al usuario o equipo responsable del llenado de datos.")
             
