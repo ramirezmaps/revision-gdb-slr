@@ -50,51 +50,31 @@ st.markdown('<div class="sub-title">Herramienta integral para inspeccionar la es
 
 # Sidebar
 st.sidebar.header("📁 Carga de Geodatabase")
-input_option = st.sidebar.radio(
-    "Seleccione el método de origen de la GDB:",
-    ["Subir archivo ZIP (.zip)", "Ruta de carpeta local (.gdb)"],
-    index=0
-)
 
 target_gdb_path = None
 temp_dir_to_clean = None
 
-if input_option == "Subir archivo ZIP (.zip)":
-    uploaded_file = st.sidebar.file_uploader(
-        "Cargue un archivo .zip que contenga su carpeta .gdb:",
-        type=["zip"],
-        help="El archivo comprimido debe incluir la carpeta .gdb completa."
-    )
-    if uploaded_file is not None:
-        if 'last_uploaded' not in st.session_state or st.session_state['last_uploaded'] != uploaded_file.name:
-            with st.spinner("Descomprimiendo archivo ZIP..."):
-                temp_dir, gdb_paths = extract_zip_gdb(uploaded_file)
-                st.session_state['temp_dir'] = temp_dir
-                st.session_state['gdb_paths'] = gdb_paths
-                st.session_state['last_uploaded'] = uploaded_file.name
-                
-        if st.session_state.get('gdb_paths'):
-            gdb_paths = st.session_state['gdb_paths']
-            if len(gdb_paths) == 1:
-                target_gdb_path = gdb_paths[0]
-            else:
-                target_gdb_path = st.sidebar.selectbox("Se encontraron varias GDBs en el ZIP. Seleccione una:", gdb_paths)
+uploaded_file = st.sidebar.file_uploader(
+    "Cargue un archivo .zip que contenga su carpeta .gdb:",
+    type=["zip"],
+    help="El archivo comprimido debe incluir la carpeta .gdb completa."
+)
+if uploaded_file is not None:
+    if 'last_uploaded' not in st.session_state or st.session_state['last_uploaded'] != uploaded_file.name:
+        with st.spinner("Descomprimiendo archivo ZIP..."):
+            temp_dir, gdb_paths = extract_zip_gdb(uploaded_file)
+            st.session_state['temp_dir'] = temp_dir
+            st.session_state['gdb_paths'] = gdb_paths
+            st.session_state['last_uploaded'] = uploaded_file.name
+            
+    if st.session_state.get('gdb_paths'):
+        gdb_paths = st.session_state['gdb_paths']
+        if len(gdb_paths) == 1:
+            target_gdb_path = gdb_paths[0]
         else:
-            st.sidebar.error("No se encontró ninguna carpeta .gdb dentro del archivo ZIP cargado.")
-
-else: # Ruta local
-    local_path_input = st.sidebar.text_input(
-        "Ingrese la ruta absoluta de la carpeta .gdb:",
-        value="",
-        placeholder="Ej: C:/Datos/MiProyecto.gdb",
-        help="Asegúrese de ingresar la ruta completa a la carpeta .gdb en su sistema."
-    )
-    if local_path_input:
-        cleaned_path = local_path_input.strip('"\'')
-        if os.path.exists(cleaned_path) and cleaned_path.lower().endswith('.gdb'):
-            target_gdb_path = cleaned_path
-        else:
-            st.sidebar.error("La ruta especificada no existe o no corresponde a un directorio .gdb válido.")
+            target_gdb_path = st.sidebar.selectbox("Se encontraron varias GDBs en el ZIP. Seleccione una:", gdb_paths)
+    else:
+        st.sidebar.error("No se encontró ninguna carpeta .gdb dentro del archivo ZIP cargado.")
 
 # Procesar Auditoría
 if target_gdb_path:
