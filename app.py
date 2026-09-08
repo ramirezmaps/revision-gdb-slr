@@ -6,6 +6,7 @@ import geopandas as gpd
 import streamlit as st
 import pydeck as pdk
 import math
+import json
 
 from gdb_inspector import extract_zip_gdb, find_gdbs_in_directory, inspect_gdb_all
 from report_generator import generate_excel_report
@@ -305,17 +306,24 @@ if target_gdb_path:
                         dynamic_zoom = get_zoom(bounds)
                         
                         # Definir la capa de PyDeck
+                        # Convertimos a JSON para máxima compatibilidad con pydeck
+                        geojson_data = json.loads(gdf_map.to_json())
+                        
                         layer = pdk.Layer(
                             "GeoJsonLayer",
-                            gdf_map,
+                            geojson_data,
                             opacity=0.8,
                             stroked=True,
                             filled=True,
                             extruded=False,
                             wireframe=True,
                             get_elevation=0,
-                            get_fill_color="[31, 78, 121, 200]",
-                            get_line_color="[255, 255, 255]",
+                            get_fill_color=[31, 78, 121, 200],
+                            get_line_color=[255, 255, 255],
+                            get_line_width=2,
+                            line_width_min_pixels=2,
+                            get_point_radius=100,
+                            point_radius_min_pixels=5,
                             pickable=True,
                         )
                         
