@@ -7,6 +7,7 @@ import streamlit as st
 import pydeck as pdk
 import math
 import json
+from google import genai
 
 from gdb_inspector import extract_zip_gdb, find_gdbs_in_directory, inspect_gdb_all
 from report_generator import generate_excel_report
@@ -77,6 +78,10 @@ if uploaded_file is not None:
     else:
         st.sidebar.error("No se encontró ninguna carpeta .gdb dentro del archivo ZIP cargado.")
 
+st.sidebar.markdown("---")
+st.sidebar.subheader("🤖 Configuración de IA")
+gemini_api_key = st.sidebar.text_input("Gemini API Key:", type="password", help="Consigue una clave gratis en Google AI Studio para activar el Chat.")
+
 # Procesar Auditoría
 if target_gdb_path:
     st.sidebar.success(f"GDB Seleccionada:\n`{os.path.basename(target_gdb_path)}`")
@@ -127,12 +132,13 @@ if target_gdb_path:
         # ---------------------------------------------------------
         # PESTAÑAS DE NAVEGACIÓN Y AUDITORÍA
         # ---------------------------------------------------------
-        tab1, tab2, tab3, tab4, tab5 = st.tabs([
+        tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
             "📊 Resumen General de GDB",
             "🔍 Inspector de Feature Class",
             "⚠️ Visor de Registros Incompletos",
             "🗺️ Mapa Interactivo",
-            "📥 Exportar Reportes"
+            "📥 Exportar Reportes",
+            "🤖 Chat con IA"
         ])
         
         # ---------------------------------------------------------
@@ -383,6 +389,68 @@ if target_gdb_path:
                     file_name=f"Resumen_GDB_{gdb_basename}.csv",
                     mime="text/csv"
                 )
+
+        # ---------------------------------------------------------
+        # TAB 6: CHAT CON IA (GEMINI)
+        # ---------------------------------------------------------
+        with tab6:
+            st.subheader("🤖 Asistente de IA para Auditoría de GDB")
+            st.markdown("Pregúntale a Gemini sobre los resultados de tu Geodatabase. La IA analizará la estructura y los problemas detectados para darte recomendaciones personalizadas.")
+            
+            if not gemini_api_key:
+                st.info("👈 Para usar el chat, ingresa tu **Gemini API Key** en el panel lateral.")
+            else:
+                # Inicializar historial de chat
+                if "messages" not in st.session_state:
+                    st.session_state.messages = []
+                    
+                # Construir el contexto de la GDB estructurado para la IA
+                context_str = "Resumen de la GDB:\n"
+                context_str += summary_df.to_markdown(index=False) + "\n\n"
+                context_str += "Detalle de campos incompletos por Feature Class:\n"
+                for fc, details_df in fields_details_dict.items():
+                    if not details_df.empty:
+                        context_str += f"- {fc}:\n{details_df.to_markdown(index=False)}\n"
+
+                # Mostrar historial visualmente
+                for message in st.session_state.messages:
+                    with st.chat_message(message["role"]):
+                        st.markdown(message["content"])
+
+                # Input de chat
+                if prompt := st.chat_input("Ej: ¿Qué Feature Class tiene más errores? ¿Qué recomiendas?"):
+                    # Agregar mensaje del usuario a la interfaz
+                    st.session_state.messages.append({"role": "user", "content": prompt})
+                    with st.chat_message("user"):
+                        st.markdown(prompt)
+                        
+                    # Llamar a Gemini
+                    with st.chat_message("assistant"):
+                        try:
+                            client = genai.Client(api_key=gemini_api_key)
+                            
+                            system_instruction = "Eres un Asistente GIS experto en calidad de datos y auditoría de Geodatabases. Responde a las consultas del usuario basándote ÚNICAMENTE en este contexto de la GDB analizada:\n" + context_str
+                            
+                            # Formatear el historial para el cliente de google-genai
+                            history_for_gemini = []
+                            for msg in st.session_state.messages[:-1]: # Excluir el último mensaje que acabamos de agregar
+                                role_gemini = "user" if msg["role"] == "user" else "model"
+                                history_for_gemini.append({"role": role_gemini, "parts": [{"text": msg["content"]}]})
+                                
+                            chat = client.chats.create(
+                                model="gemini-2.5-flash",
+                                config={"system_instruction": system_instruction},
+                                history=history_for_gemini
+                            )
+                            
+                            with st.spinner("Analizando datos espaciales..."):
+                                response = chat.send_message(prompt)
+                                st.markdown(response.text)
+                                st.session_state.messages.append({"role": "assistant", "content": response.text})
+                                
+                        except Exception as e:
+                            st.error(f"Error al comunicar con Gemini: {e}")
+
 else:
     # Estado inicial cuando no se ha seleccionado ninguna GDB
     st.info("👈 Para comenzar, use el menú lateral izquierdo para cargar un archivo `.zip` con su Geodatabase o especificar la ruta local de la carpeta `.gdb`.")
